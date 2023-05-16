@@ -9,7 +9,7 @@ Written primarily to scratch an itch, this tool is not recommended for productio
 Install and update using pip:
 
 ```bash
-pip install -U emrss
+pip install -U emr-serverless-sql-cli
 ```
 
 ## Running
