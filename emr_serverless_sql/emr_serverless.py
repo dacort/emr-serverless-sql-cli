@@ -1,6 +1,7 @@
 import gzip
 import os
 import sys
+import tempfile
 from string import Template
 
 import boto3
@@ -40,6 +41,41 @@ class Session:
         }
 
         return self._submit_job_run("sql-runner", job_driver, log_location)
+
+    def submit_notebook_file(self, filename):
+        # Convert the notebook to a script and upload it to S3
+        import nbformat
+        from nbconvert import PythonExporter
+
+        def convertNotebook(notebookPath, modulePath):
+            with open(notebookPath) as fh:
+                nb = nbformat.reads(fh.read(), nbformat.NO_CONVERT)
+
+            exporter = PythonExporter()
+            source, meta = exporter.from_notebook_node(nb)
+
+            with open(modulePath, "w+") as fh:
+                fh.writelines(source)
+
+        target_path = f"tmp/{os.path.basename(filename.replace('.ipynb', '.py'))}"
+        filepath = tempfile.mktemp()
+        convertNotebook(filename, filepath)
+        try:
+            self.s3_client.upload_file(filepath, self.s3_bucket, target_path)
+        except ClientError as e:
+            console_log(f"error uploading file to s3: {e}")
+            sys.exit(1)
+
+        script_location = f"s3://{self.s3_bucket}/{target_path}"
+        log_location = f"s3://{self.s3_bucket}/logs"
+        job_driver = {
+            "sparkSubmit": {
+                "entryPoint": script_location,
+                "sparkSubmitParameters": f"--conf spark.hadoop.hive.metastore.client.factory.class=com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory",
+            }
+        }
+
+        return self._submit_job_run("notebook-runner", job_driver, log_location)
 
     def submit_sql(self, sql):
         # We need to create a temporary file with our SQL and upload it to S3

@@ -20,13 +20,17 @@ def run(application_id, job_role_arn, s3_bucket, sql_statement, file):
         raise click.UsageError("Cannot use --file and query string at the same time.")
     if not file and not sql_statement:
         raise click.UsageError("Must specify either --file or query string.")
+    if not file.endswith(".sql") and not file.endswith(".ipynb"):
+        raise click.UsageError("File must be a .sql or .ipynb file.")
     session = Session(application_id, job_role_arn, s3_bucket)
     session.start_application()
-    jobrunid = (
-        session.submit_sql(sql_statement)
-        if sql_statement
-        else session.submit_sql_file(file)
-    )
+    jobrunid: str
+    if sql_statement:
+        jobrunid = session.submit_sql(sql_statement)
+    elif file.endswith(".sql"):
+        jobrunid = session.submit_sql_file(file)
+    elif file.endswith(".ipynb"):
+        jobrunid = session.submit_notebook_file(file)
     output = session.fetch_driver_log(jobrunid)
     print(output)
 
