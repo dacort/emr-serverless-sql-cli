@@ -35,3 +35,13 @@ emrss \
     --s3-bucket $S3_BUCKET \
     -f script.sql
 ```
+
+And just for fun, you can also run a PySpark notebook through. 😮
+
+```bash
+emrss \
+    --application-id $APPLICATION_ID \
+    --job-role-arn $JOB_ROLE_ARN \
+    --s3-bucket $S3_BUCKET \
+    -f notebook.ipynb
+```
