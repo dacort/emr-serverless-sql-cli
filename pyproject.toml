@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "emr-serverless-sql-cli"
-version = "0.2.0"
+version = "0.3.0"
 description = ""
 authors = ["Damon P. Cortesi <1512+dacort@users.noreply.github.com>"]
 readme = "README.md"
