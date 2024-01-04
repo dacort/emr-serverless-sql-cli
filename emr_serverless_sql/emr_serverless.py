@@ -78,21 +78,33 @@ class Session:
         return self._submit_job_run("notebook-runner", job_driver, log_location)
 
     def submit_sql(self, sql):
-        # We need to create a temporary file with our SQL and upload it to S3
-        with open(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "sql_template.py")
-        ) as f:
-            query_file = Template(f.read()).substitute(query=sql.replace('"', '\\"'))
-            self.s3_client.put_object(
-                Body=query_file, Bucket=self.s3_bucket, Key="tmp/emrss-sql_template.py"
-            )
+        # Create a placeholder job_driver variable
+        job_driver = {}
 
-        job_driver = {
-            "sparkSubmit": {
-                "entryPoint": f"s3://{self.s3_bucket}/tmp/emrss-sql_template.py",
-                "sparkSubmitParameters": "--conf spark.hadoop.hive.metastore.client.factory.class=com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory ",
+        # If the SQL is less than 256 characters, we can submit it directly to the application.
+        # Otherwise, we need to create a temporary file with our SQL and upload it to S3.
+        if len(sql) < 256:
+            job_driver = {
+                "sparkSubmit": {
+                    "entryPoint": sql,
+                    "sparkSubmitParameters": "--conf spark.hadoop.hive.metastore.client.factory.class=com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory --class org.apache.spark.sql.hive.thriftserver.SparkSQLCLIDriver -e",
+                }
             }
-        }
+        else:
+            with open(
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "sql_template.py")
+            ) as f:
+                query_file = Template(f.read()).substitute(query=sql.replace('"', '\\"'))
+                self.s3_client.put_object(
+                    Body=query_file, Bucket=self.s3_bucket, Key="tmp/emrss-sql_template.py"
+                )
+
+            job_driver = {
+                "sparkSubmit": {
+                    "entryPoint": f"s3://{self.s3_bucket}/tmp/emrss-sql_template.py",
+                    "sparkSubmitParameters": "--conf spark.hadoop.hive.metastore.client.factory.class=com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory ",
+                }
+            }
         log_location = f"s3://{self.s3_bucket}/logs"
 
         return self._submit_job_run("sql-runner", job_driver, log_location)
