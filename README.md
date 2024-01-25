@@ -45,3 +45,14 @@ emrss \
     --s3-bucket $S3_BUCKET \
     -f notebook.ipynb
 ```
+
+If you don't have a default region set in your config or environment, you can use the `--region` parameter:
+
+```bash
+emrss \
+    --application-id $APPLICATION_ID \
+    --job-role-arn $JOB_ROLE_ARN \
+    --s3-bucket $S3_BUCKET \
+    --region $REGION \
+    "show tables"
+```

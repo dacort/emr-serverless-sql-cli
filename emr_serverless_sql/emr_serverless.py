@@ -6,16 +6,17 @@ from string import Template
 
 import boto3
 from botocore.exceptions import ClientError
+from botocore.config import Config
 
 from emr_serverless_sql import console_log
 
 
 class Session:
-    def __init__(self, application_id, job_role, s3_bucket):
+    def __init__(self, application_id, job_role, s3_bucket, region):
         self.application_id = application_id
         self.job_role = job_role
         self.s3_bucket = s3_bucket
-        self.client = boto3.client("emr-serverless")
+        self.client = boto3.client("emr-serverless", config=Config(region_name=region))
         self.s3_client = boto3.client("s3")
 
     def start_application(self):
